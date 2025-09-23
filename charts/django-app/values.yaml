@@ -12,7 +12,7 @@ service:
 config:
   DJANGO_SECRET_KEY: "my_secret_key"
   DJANGO_DEBUG: "False"
-  DJANGO_ALLOWED_HOSTS: "aae25e513c8ff4e80bcb6e623cd87400-1257949150.eu-central-1.elb.amazonaws.com,localhost,127.0.0.1"
+  ALLOWED_HOSTS: "aae25e513c8ff4e80bcb6e623cd87400-1257949150.eu-central-1.elb.amazonaws.com"
   DB_NAME: "mydb"
   DB_USER: "user"
   DB_PASSWORD: "password"
