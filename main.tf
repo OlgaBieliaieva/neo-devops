@@ -18,3 +18,8 @@ module "ecr" {
   ecr_name     = "lesson-5-ecr"
   scan_on_push = true
 }
+
+module "eks" {
+  source     = "./modules/eks"
+  subnet_ids = module.vpc.public_subnets
+}

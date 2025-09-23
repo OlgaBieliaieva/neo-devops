@@ -1,0 +1,26 @@
+image:
+  repository: 556240469610.dkr.ecr.eu-central-1.amazonaws.com/lesson-5-ecr
+  tag: latest
+  pullPolicy: Always
+
+replicaCount: 2
+
+service:
+  type: LoadBalancer
+  port: 8000
+
+config:
+  DJANGO_SECRET_KEY: "my_secret_key"
+  DJANGO_DEBUG: "True"
+  DJANGO_ALLOWED_HOSTS: "aae25e513c8ff4e80bcb6e623cd87400-1257949150.eu-central-1.elb.amazonaws.com,localhost,127.0.0.1"
+  DB_NAME: "mydb"
+  DB_USER: "user"
+  DB_PASSWORD: "password"
+  DB_HOST: "db-host"
+  DB_PORT: "5432"
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
