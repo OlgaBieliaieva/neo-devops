@@ -1,11 +1,14 @@
-# Neo DevOps Terraform Project
+# Neo DevOps Terraform & Kubernetes Project
 
-Цей проєкт створює базову інфраструктуру в AWS за допомогою Terraform.  
+Цей проєкт створює базову інфраструктуру в AWS за допомогою Terraform та розгортає Django-додаток у Kubernetes через Helm.
+
 Інфраструктура включає:
 
 - **S3 бакет** + **DynamoDB** для зберігання та блокування Terraform state.
-- **VPC** з публічними та приватними підмережами, інтернет-шлюзом і маршрутами.
+- **VPC** з публічними та приватними підмережами, інтернет-шлюзом та маршрутами.
 - **ECR репозиторій** для зберігання Docker образів.
+- **EKS кластер** для запуску Kubernetes.
+- **Helm чарти** для деплою Django-додатку.
 
 ---
 
@@ -13,20 +16,42 @@
 
 ```
 neo-devops/
-├── main.tf # Головний файл для виклику модулів
-├── variables.tf # Глобальні змінні
-├── outputs.tf # Глобальні outputs
-├── modules/
-│ ├── s3-backend/ # Модуль для S3 + DynamoDB
+├── main.tf # Головний файл для підключення модулів
+├── backend.tf # Налаштування бекенду для Terraform state (S3 + DynamoDB)
+├── outputs.tf # Загальні виводи ресурсів
+│
+├── modules/ # Каталог з усіма модулями
+│ ├── s3-backend/ # Модуль для S3 та DynamoDB
 │ │ ├── s3.tf
 │ │ ├── dynamodb.tf
+│ │ ├── variables.tf
 │ │ └── outputs.tf
+│ │
 │ ├── vpc/ # Модуль для VPC
 │ │ ├── vpc.tf
+│ │ ├── routes.tf
+│ │ ├── variables.tf
 │ │ └── outputs.tf
-│ └── ecr/ # Модуль для ECR
-│ ├── ecr.tf
+│ │
+│ ├── ecr/ # Модуль для ECR
+│ │ ├── ecr.tf
+│ │ ├── variables.tf
+│ │ └── outputs.tf
+│ │
+│ └── eks/ # Модуль для EKS
+│ ├── eks.tf
+│ ├── variables.tf
 │ └── outputs.tf
+│
+├── charts/ # Helm чарти
+│ └── django-app/
+│ ├── templates/
+│ │ ├── deployment.yaml
+│ │ ├── service.yaml
+│ │ ├── configmap.yaml
+│ │ └── hpa.yaml
+│ ├── Chart.yaml
+│ └── values.yaml # ConfigMap зі змінними середовища
 ```
 
 ---
@@ -50,6 +75,30 @@ neo-devops/
 4. Видалення всієї інфраструктури:
    ```bash
    terraform destroy
+   ```
+
+## 🏗️ Деплой Django в Kubernetes через Helm
+
+1. Перевірка доступності Kubernetes кластера (EKS):
+
+   ```bash
+   aws eks --region <region> update-kubeconfig --name <cluster_name>
+   kubectl get nodes
+   ```
+
+2. Деплой Django-додатку:
+
+   ```bash
+   helm upgrade --install django-app ./charts/django-app -n default -f ./charts/django-app/values.yaml
+   ```
+3. Перевірка стану Pods:
+
+   ```bash
+   kubectl get pods -n default -l app=django-app
+   ```
+4. Перевірка сервісу та зовнішньої адреси:
+   ```bash
+   kubectl get svc -n default
    ```
 
 ## 📦 Модулі
@@ -86,13 +135,27 @@ neo-devops/
 
 - Увімкнено автоматичне сканування образів на вразливості.
 
+🔹 eks
+
+- Створює EKS кластер для запуску Kubernetes.
+
+- Виводить kubeconfig для підключення.
+
+- Підтримує масштабування worker-нодів.
+
 ## ✅ Вимоги
 
 AWS акаунт з налаштованими credentials.
 
 Terraform v1.3+.
 
-AWS CLI (рекомендовано для керування та перевірки ресурсів).
+AWS CLI.
+
+Helm 3+.
+
+Kubectl 1.25+.
+
+Docker (для збірки та пушу образів).
 
 ## 🔑 Outputs
 
