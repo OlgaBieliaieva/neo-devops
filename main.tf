@@ -1,25 +1,54 @@
+provider "aws" {
+  region = var.aws_region
+}
+
 module "s3_backend" {
   source      = "./modules/s3-backend"
-  bucket_name = "terraform-state-bucket-l5"
-  table_name  = "terraform-locks"
+  bucket_name = var.tfstate_bucket
+  table_name  = var.tfstate_table
 }
 
 module "vpc" {
   source             = "./modules/vpc"
-  vpc_cidr_block     = "10.0.0.0/16"
-  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  private_subnets    = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-  availability_zones = ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
-  vpc_name           = "lesson-5-vpc"
+  vpc_cidr_block     = var.vpc_cidr_block
+  public_subnets     = var.public_subnets
+  private_subnets    = var.private_subnets
+  availability_zones = var.availability_zones
+  vpc_name           = var.vpc_name
 }
 
 module "ecr" {
   source       = "./modules/ecr"
-  ecr_name     = "lesson-5-ecr"
-  scan_on_push = true
+  ecr_name     = var.ecr_name
+  scan_on_push = var.ecr_scan_on_push
 }
 
 module "eks" {
-  source     = "./modules/eks"
-  subnet_ids = module.vpc.public_subnets
+  source = "./modules/eks"
+
+  cluster_name   = var.cluster_name
+  vpc_id         = module.vpc.vpc_id
+  subnet_ids     = module.vpc.private_subnets
+  node_instance_type = "t3.medium"
 }
+
+module "argo_cd" {
+  source = "./modules/argo_cd"
+
+  cluster_name     = module.eks.cluster_name
+  kubeconfig       = module.eks.kubeconfig_raw   # новий output у модулі eks
+  helm_chart_repo  = var.helm_chart_repo
+  helm_chart_path  = var.helm_chart_path
+  argocd_namespace = "argocd"
+  argocd_chart_version = "5.23.4"
+}
+
+module "jenkins" {
+  source = "./modules/jenkins"
+
+  cluster_name   = module.eks.cluster_name
+  kubeconfig     = module.eks.kubeconfig_raw
+  kaniko_role_arn = module.eks.kaniko_role_arn
+  ecr_repository = module.ecr.repository_url
+}
+

@@ -1,5 +1,9 @@
+provider "aws" {
+  region = var.region
+}
+
 resource "aws_iam_role" "eks" {
-  name = "lesson7-eks-role"
+  name = "${var.cluster_name}-eks-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -22,7 +26,7 @@ resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = "lesson7-eks"
+  name     = var.cluster_name
   role_arn = aws_iam_role.eks.arn
 
   vpc_config {
@@ -35,9 +39,8 @@ resource "aws_eks_cluster" "this" {
   ]
 }
 
-# Worker nodes (Node Group)
 resource "aws_iam_role" "eks_nodes" {
-  name = "lesson7-eks-nodes"
+  name = "${var.cluster_name}-nodes-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -66,7 +69,7 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry" {
 
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "lesson7-ng"
+  node_group_name = "${var.cluster_name}-ng"
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = var.subnet_ids
 
@@ -78,3 +81,13 @@ resource "aws_eks_node_group" "default" {
 
   instance_types = ["t3.medium"]
 }
+
+data "aws_eks_cluster" "this" {
+  name = aws_eks_cluster.this.name
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = aws_eks_cluster.this.name
+}
+
+

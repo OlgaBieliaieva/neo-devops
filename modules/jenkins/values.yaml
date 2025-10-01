@@ -1,0 +1,39 @@
+controller:
+  adminUser: "admin"
+  installPlugins:
+    - kubernetes:1.31.4
+    - workflow-aggregator:2.6
+    - credentials-binding:1.27
+    - git:4.8.2
+    - pipeline-github-lib:1.0
+  JCasC:
+    configScripts:
+      kubernetes-cloud: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "k8s"
+                namespace: "jenkins"
+                serverUrl: ""
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                templates:
+                  - name: "kaniko"
+                    label: "kaniko"
+                    serviceAccount: "jenkins-agent"
+                    containers:
+                      - name: kaniko
+                        image: "gcr.io/kaniko-project/executor:latest"
+                        command:
+                          - "/kaniko/executor"
+                        args:
+                          - "--verbosity=info"
+                    ttyEnabled: false
+  # set service type to ClusterIP by default; expose with LB or ingress elsewhere if needed
+  serviceType: ClusterIP
+  resources:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "200m"
+      memory: "256Mi"

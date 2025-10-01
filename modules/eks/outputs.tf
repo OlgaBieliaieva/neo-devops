@@ -9,3 +9,23 @@ output "cluster_endpoint" {
 output "cluster_ca" {
   value = aws_eks_cluster.this.certificate_authority[0].data
 }
+
+output "kaniko_role_arn" {
+  value = aws_iam_role.kaniko.arn
+}
+
+output "eks_nodes_role_arn" {
+  value = aws_iam_role.eks_nodes.arn
+}
+
+output "eks_role_arn" {
+  value = aws_iam_role.eks.arn
+}
+
+output "kubeconfig_raw" {
+  value = templatefile("${path.module}/kubeconfig.tpl", {
+    cluster_name = aws_eks_cluster.this.name
+    endpoint     = aws_eks_cluster.this.endpoint
+    cluster_ca   = aws_eks_cluster.this.certificate_authority[0].data
+  })
+}
