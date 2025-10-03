@@ -4,11 +4,11 @@ metadata:
   name: django-app
   namespace: argocd
 spec:
-  project: default
+  project: django-project
   source:
-    repoURL: "{{ .Values.repo_url | default "https://github.com/OlgaBieliaieva/neo-devops/tree/lesson-8-9" }}"
+    repoURL: "{{ .Values.repo_url | default "https://github.com/OlgaBieliaieva/neo-devops" }}"
     path: "{{ .Values.path | default "charts/django-app" }}"
-    targetRevision: "{{ .Values.targetRevision | default "main" }}"
+    targetRevision: "{{ .Values.targetRevision | default "lesson-9" }}"
     helm:
       valueFiles:
         - values.yaml

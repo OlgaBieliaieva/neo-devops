@@ -1,13 +1,17 @@
 provider "kubernetes" {
-  config_path = var.kubeconfig
+  host                   = var.cluster_endpoint
+  cluster_ca_certificate = base64decode(var.cluster_ca)
+  token                  = data.aws_eks_cluster_auth.this.token
 }
 
 provider "helm" {
-  kubernetes {
-    config_path = var.kubeconfig
+  kubernetes = {
+    host                   = var.cluster_endpoint
+    cluster_ca_certificate = base64decode(var.cluster_ca)
+    token                  = data.aws_eks_cluster_auth.this.token
   }
 }
 
 data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
+  name = var.cluster_name
 }

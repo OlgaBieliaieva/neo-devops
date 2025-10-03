@@ -35,3 +35,6 @@ spec:
               value: "{{ .Values.config.DB_HOST }}"
             - name: DB_PORT
               value: "{{ .Values.config.DB_PORT }}"
+          envFrom:
+            - secretRef:
+                name: {{ include "django-app.fullname" . }}-secret

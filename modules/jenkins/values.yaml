@@ -14,7 +14,7 @@ controller:
             - kubernetes:
                 name: "k8s"
                 namespace: "jenkins"
-                serverUrl: ""
+                serverUrl: "https://kubernetes.default.svc"
                 jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
                 templates:
                   - name: "kaniko"
@@ -28,7 +28,6 @@ controller:
                         args:
                           - "--verbosity=info"
                     ttyEnabled: false
-  # set service type to ClusterIP by default; expose with LB or ingress elsewhere if needed
   serviceType: ClusterIP
   resources:
     limits:

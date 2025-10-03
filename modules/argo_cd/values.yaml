@@ -3,5 +3,5 @@ server:
     type: LoadBalancer
 configs:
   repositories: |
-    - url: https://github.com/OlgaBieliaieva/neo-devops/tree/lesson-8-9
+    - url: https://github.com/OlgaBieliaieva/neo-devops
       type: git

@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "tfstate_bucket" {
   type    = string
-  default = "terraform-state-bucket-l5"
+  default = "terraform-state-bucket-l9"
 }
 
 variable "tfstate_table" {
@@ -27,5 +27,14 @@ variable "ecr_scan_on_push" {
 
 variable "cluster_name" { type = string }
 
+variable "node_instance_type" {
+  type    = string
+  default = "t3.medium"
+}
+
 variable "helm_chart_repo" { type = string }
 variable "helm_chart_path" { type = string }
+variable "key_name" {
+  description = "SSH key pair name for EKS nodes"
+  type        = string
+}
