@@ -93,8 +93,6 @@ data "aws_eks_cluster_auth" "this" {
 }
 
 
-І main.tf має передавати ці змінні:
-
 module "argo_cd" {
   source           = "./modules/argo_cd"
   cluster_name     = module.eks.cluster_name
