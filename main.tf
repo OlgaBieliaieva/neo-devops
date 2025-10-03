@@ -36,6 +36,65 @@ module "eks" {
   node_instance_type = var.node_instance_type
 }
 
+Програма ChatGPT сказала:
+
+Зараз у тебе дві основні проблеми:
+
+1️⃣ Timeout while waiting for plugin to start
+
+Це від Terraform провайдера (aws, kubernetes або helm). Причини:
+
+WSL іноді блокує запуск плагінів через права доступу.
+
+Плагін пошкоджений або неправильно завантажився.
+
+Недостатньо ресурсів або антивірус блокує процес.
+
+Виправлення:
+
+# Очистити кеш Terraform
+rm -rf .terraform
+rm -rf .terraform.lock.hcl
+
+# Перевстановити провайдери
+terraform init -upgrade
+
+
+Переконайся, що права на ~/.terraform.d коректні:
+
+sudo chown -R $(whoami) ~/.terraform.d
+
+2️⃣ dial tcp 127.0.0.1:80: connect: connection refused
+
+Ця помилка з Kubernetes-провайдером:
+
+Terraform намагається підключитися до localhost замість реального EKS кластера.
+
+Вказані провайдери у модулях argo_cd і jenkins неправильно налаштовані.
+
+Правильна конфігурація у modules/argo_cd/providers.tf та modules/jenkins/providers.tf:
+
+provider "kubernetes" {
+  host                   = var.cluster_endpoint
+  cluster_ca_certificate = base64decode(var.cluster_ca)
+  token                  = data.aws_eks_cluster_auth.this.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = var.cluster_endpoint
+    cluster_ca_certificate = base64decode(var.cluster_ca)
+    token                  = data.aws_eks_cluster_auth.this.token
+  }
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = var.cluster_name
+}
+
+
+І main.tf має передавати ці змінні:
+
 module "argo_cd" {
   source           = "./modules/argo_cd"
   cluster_name     = module.eks.cluster_name
