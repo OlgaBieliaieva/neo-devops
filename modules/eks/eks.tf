@@ -2,6 +2,24 @@ provider "aws" {
   region = var.region
 }
 
+# Kubernetes Provider для EKS
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.this.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.this.token
+  load_config_file       = false
+}
+
+# Helm Provider (для ArgoCD, Jenkins і т.д.)
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.this.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.this.token
+    load_config_file       = false
+  }
+}
+
 # IAM Role для EKS Cluster
 resource "aws_iam_role" "eks" {
   name = "${var.cluster_name}-eks-role"
@@ -70,12 +88,23 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_launch_template" "eks_nodes_lt" {
+  name_prefix   = "${var.cluster_name}-lt-"
+  
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [var.worker_sg_id]
+
+  key_name = var.key_name
+}
+
+
 # Node Group
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "${var.cluster_name}-ng"
-  node_role_arn   = aws_iam_role.eks_nodes.arn
-  subnet_ids      = var.private_subnets
+  node_role_arn   = aws_iam_role.eks_nodes.arn  
+  subnet_ids = var.private_subnet_ids
 
   scaling_config {
     desired_size = 2
@@ -83,13 +112,16 @@ resource "aws_eks_node_group" "default" {
     min_size     = 1
   }
 
-  remote_access {
-    ec2_ssh_key     = var.key_name
+  launch_template {
+    id      = aws_launch_template.eks_nodes_lt.id
+    version = "$Latest"
   }
 
   depends_on = [
+    aws_eks_cluster.this,
     aws_iam_role_policy_attachment.eks_worker_node,
-    aws_iam_role_policy_attachment.eks_cni
+    aws_iam_role_policy_attachment.eks_cni,
+    aws_iam_role_policy_attachment.ec2_container_registry
   ]
 }
 

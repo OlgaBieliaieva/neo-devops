@@ -1,5 +1,8 @@
 variable "cluster_name" { type = string }
-variable "subnet_ids" { type = list(string) }
+variable "subnet_ids" {
+  description = "List of private subnet IDs for EKS node group"
+  type        = list(string)
+}
 variable "vpc_id" { type = string }
 variable "region" { type = string }
 
@@ -20,5 +23,26 @@ variable "private_subnets" {
 
 variable "public_subnets" {
   description = "List of public subnet IDs for EKS cluster"
+  type        = list(string)
+}
+
+variable "node_security_groups" {
+  type    = list(string)
+  default = []
+}
+
+variable "worker_sg_id" {
+  description = "Security group ID for EKS worker nodes"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "Type of EC2 instances in the node group"
+  type        = string
+  default     = "t3.medium"
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for the EKS cluster"
   type        = list(string)
 }

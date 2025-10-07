@@ -1,8 +1,8 @@
 aws_region = "eu-central-1"
 
-key_name = "lesson9-eks-key"
+key_name = "lesson7-eks-key"
 
-tfstate_bucket = "terraform-state-bucket-l9"
+tfstate_bucket = "terraform-state-bucket-l9-new"
 tfstate_table  = "terraform-locks"
 
 vpc_cidr_block = "10.0.0.0/16"

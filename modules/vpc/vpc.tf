@@ -32,3 +32,37 @@ resource "aws_subnet" "private" {
     Name = "${var.vpc_name}-private-${each.key}"
   }
 }
+
+# Security group для EKS worker nodes
+resource "aws_security_group" "eks_worker_sg" {
+  name        = "lesson9-eks-worker-sg"
+  description = "Security group for EKS worker nodes"
+  vpc_id      = aws_vpc.this.id
+
+  # Дозволяємо трафік між воркерами і control plane
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Вихідний трафік — дозволити все
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "lesson9-eks-worker-sg"
+  }
+}
