@@ -9,6 +9,7 @@
 - **ECR репозиторій** для зберігання Docker образів.
 - **EKS кластер** для запуску Kubernetes.
 - **Helm чарти** для деплою Django-додатку.
+- **RDS / Aurora** для зберігання даних додатку.
 
 ---
 
@@ -16,42 +17,25 @@
 
 ```
 neo-devops/
-├── main.tf # Головний файл для підключення модулів
-├── backend.tf # Налаштування бекенду для Terraform state (S3 + DynamoDB)
-├── outputs.tf # Загальні виводи ресурсів
+├── main.tf
+├── backend.tf
+├── outputs.tf
 │
-├── modules/ # Каталог з усіма модулями
-│ ├── s3-backend/ # Модуль для S3 та DynamoDB
-│ │ ├── s3.tf
-│ │ ├── dynamodb.tf
+├── modules/
+│ ├── s3-backend/
+│ ├── vpc/
+│ ├── ecr/
+│ ├── eks/
+│ ├── rds/ # ✅ Новий модуль RDS
+│ │ ├── rds.tf
+│ │ ├── aurora.tf
+│ │ ├── shared.tf
 │ │ ├── variables.tf
 │ │ └── outputs.tf
-│ │
-│ ├── vpc/ # Модуль для VPC
-│ │ ├── vpc.tf
-│ │ ├── routes.tf
-│ │ ├── variables.tf
-│ │ └── outputs.tf
-│ │
-│ ├── ecr/ # Модуль для ECR
-│ │ ├── ecr.tf
-│ │ ├── variables.tf
-│ │ └── outputs.tf
-│ │
-│ └── eks/ # Модуль для EKS
-│ ├── eks.tf
-│ ├── variables.tf
-│ └── outputs.tf
-│
-├── charts/ # Helm чарти
+│ └── jenkins/
+│ └── argo_cd/
+├── charts/
 │ └── django-app/
-│ ├── templates/
-│ │ ├── deployment.yaml
-│ │ ├── service.yaml
-│ │ ├── configmap.yaml
-│ │ └── hpa.yaml
-│ ├── Chart.yaml
-│ └── values.yaml # ConfigMap зі змінними середовища
 ```
 
 ---
@@ -142,6 +126,77 @@ neo-devops/
 - Виводить kubeconfig для підключення.
 
 - Підтримує масштабування worker-нодів.
+
+🔹 rds ✅
+
+Модуль для створення бази даних, який універсально працює як для звичайної RDS instance, так і для Aurora Cluster.
+
+### Основні можливості:
+
+1. use_aurora = true → створює Aurora Cluster + writer.
+
+2. use_aurora = false → створює стандартну aws_db_instance.
+
+3. Автоматично створює:
+
+- DB Subnet Group
+
+- Security Group
+
+- Parameter Group з базовими налаштуваннями (max_connections, log_statement, work_mem).
+
+4. Параметри, які можна змінювати через змінні:
+
+- engine (тип бази: postgres, mysql тощо)
+
+- engine_version
+
+- instance_class
+
+- multi_az для RDS
+
+5. Підтримка багаторазового використання модуля з мінімальними змінами.
+
+### Приклад використання модуля:
+```bash
+module "rds" {
+  source        = "./modules/rds"
+  use_aurora    = true
+  engine        = "aurora-postgresql"
+  engine_version = "15.2"
+  instance_class = "db.r6g.large"
+  multi_az      = true
+  db_name       = "myappdb"
+  username      = "admin"
+  password      = "SuperSecret"
+  vpc_id        = module.vpc.vpc_id
+  subnet_ids    = module.vpc.private_subnets
+}
+```
+### Змінні модуля (variables.tf):
+| Змінна           | Тип    | Опис                                                   |
+| ---------------- | ------ | ------------------------------------------------------ |
+| `use_aurora`     | bool   | Якщо true → Aurora Cluster, якщо false → RDS instance  |
+| `engine`         | string | Тип БД (`postgres`, `mysql`, `aurora-postgresql` тощо) |
+| `engine_version` | string | Версія БД                                              |
+| `instance_class` | string | Тип інстансу AWS RDS                                   |
+| `multi_az`       | bool   | Множинна зона для RDS instance                         |
+| `db_name`        | string | Ім'я бази даних                                        |
+| `username`       | string | Логін адміністратора                                   |
+| `password`       | string | Пароль адміністратора                                  |
+| `vpc_id`         | string | ID VPC для DB                                          |
+| `subnet_ids`     | list   | Список приватних subnet IDs для DB Subnet Group        |
+
+### Outputs (outputs.tf):
+- db_endpoint – адреса для підключення до бази.
+
+- db_port – порт бази.
+
+- db_cluster_id – ID Aurora Cluster (якщо use_aurora=true).
+
+- db_instance_id – ID RDS instance (якщо use_aurora=false).
+
+
 
 ## ✅ Вимоги
 
