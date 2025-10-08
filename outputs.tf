@@ -1,19 +1,63 @@
+output "s3_bucket_name" {
+  description = "S3 bucket name for Terraform state"
+  value       = module.s3_backend.bucket_name
+}
+
+output "vpc_id" {
+  description = "VPC ID"
+  value       = module.vpc.vpc_id
+}
+
 output "ecr_repository_url" {
-  value = module.ecr.repository_url
+  description = "ECR repository URL"
+  value       = module.ecr.repository_url
 }
 
 output "eks_cluster_name" {
-  value = module.eks.cluster_name
+  description = "EKS cluster name"
+  value       = module.eks.cluster_name
 }
 
 output "eks_cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+  description = "EKS cluster endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_arn" {
+  description = "EKS cluster ARN"
+  value       = module.eks.cluster_arn
+}
+
+output "kubectl_config_command" {
+  description = "Command to configure kubectl"
+  value       = "aws eks update-kubeconfig --region eu-central-1 --name ${module.eks.cluster_name}"
 }
 
 output "jenkins_url" {
-  value = module.jenkins.jenkins_url
+  description = "Jenkins LoadBalancer URL"
+  value       = module.jenkins.jenkins_url
 }
 
-output "argocd_server" {
-  value = module.argo_cd.argocd_server
+output "jenkins_admin_user" {
+  description = "Jenkins admin username"
+  value       = module.jenkins.jenkins_admin_user
 }
+
+output "jenkins_admin_password" {
+  description = "Jenkins admin password"
+  value       = module.jenkins.jenkins_admin_password
+  sensitive   = true
+}
+
+
+output "argocd_server_url" {
+  description = "Argo CD Server URL"
+  value       = module.argo_cd.argocd_server_url
+}
+
+output "argocd_admin_password" {
+  description = "Argo CD admin password"
+  value       = module.argo_cd.argocd_admin_password
+  sensitive   = true
+}
+

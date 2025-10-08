@@ -1,21 +1,32 @@
+{{- range .Values.applications }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: django-app
-  namespace: argocd
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  project: django-project
+  project: {{ .project }}
   source:
-    repoURL: "{{ .Values.repo_url | default "https://github.com/OlgaBieliaieva/neo-devops" }}"
-    path: "{{ .Values.path | default "charts/django-app" }}"
-    targetRevision: "{{ .Values.targetRevision | default "lesson-9" }}"
+    repoURL: {{ tpl .source.repoURL $ }}
+    targetRevision: {{ tpl .source.targetRevision $ }}
+    path: {{ .source.path }}
     helm:
       valueFiles:
         - values.yaml
   destination:
-    server: https://kubernetes.default.svc
-    namespace: default
+    server: {{ .destination.server }}
+    namespace: {{ tpl .destination.namespace $ }}
   syncPolicy:
+    {{- if .syncPolicy.automated }}
     automated:
-      prune: true
-      selfHeal: true
+      prune: {{ .syncPolicy.automated.prune }}
+      selfHeal: {{ .syncPolicy.automated.selfHeal }}
+    {{- end }}
+    syncOptions:
+      {{- range .syncPolicy.syncOptions }}
+      - {{ . }}
+      {{- end }}
+---
+{{- end }}

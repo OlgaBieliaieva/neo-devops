@@ -1,29 +1,39 @@
-variable "cluster_name" { type = string }
-variable "cluster_endpoint" { type = string }
-variable "cluster_ca" { type = string }
-
-variable "argocd_namespace" {
-  type    = string
-  default = "argocd"
+variable "cluster_name" {
+  description = "EKS cluster name"
+  type        = string
 }
 
-variable "helm_chart_repo" {
-  type    = string
-  default = "https://argoproj.github.io/argo-helm"
+variable "cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  type        = string
 }
 
-variable "helm_chart_path" {
-  type    = string
-  default = "argo-cd"
+variable "namespace" {
+  description = "Kubernetes namespace for Argo CD"
+  type        = string
+  default     = "argocd"
 }
 
-variable "argocd_chart_version" {
-  type    = string
-  default = "5.23.4"
+variable "chart_version" {
+  description = "Argo CD Helm chart version"
+  type        = string
+  default     = "5.51.4"
 }
 
-variable "argocd_repo_url" {
-  type    = string
-  default = "https://github.com/OlgaBieliaieva/neo-devops"
+variable "git_repo_url" {
+  description = "Git repository URL for Django app"
+  type        = string
+  default     = "https://github.com/OlgaBieliaieva/neo-devops.git"
 }
 
+variable "git_target_revision" {
+  description = "Git branch/tag to track"
+  type        = string
+  default     = "neo-devops"
+}
+
+variable "django_app_namespace" {
+  description = "Namespace for Django application"
+  type        = string
+  default     = "django-app"
+}

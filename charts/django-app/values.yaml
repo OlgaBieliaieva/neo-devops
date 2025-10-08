@@ -1,26 +1,42 @@
+replicaCount: 2
+
 image:
   repository: 556240469610.dkr.ecr.eu-central-1.amazonaws.com/lesson-5-ecr
-  tag: latest
   pullPolicy: Always
+  tag: "latest"
 
-replicaCount: 2
+nameOverride: ""
+fullnameOverride: ""
 
 service:
   type: LoadBalancer
-  port: 8000
+  port: 80
+  targetPort: 8000
 
-config:
-  DJANGO_SECRET_KEY: "my_secret_key"
-  DJANGO_DEBUG: "False"
-  ALLOWED_HOSTS: "aae25e513c8ff4e80bcb6e623cd87400-1257949150.eu-central-1.elb.amazonaws.com"
-  DB_NAME: "mydb"
-  DB_USER: "user"
-  DB_PASSWORD: "password"
-  DB_HOST: "db-host"
-  DB_PORT: "5432"
-
-hpa:
+autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+config:
+  SECRET_KEY: "my_secret_key"
+  DEBUG: "False"
+  ALLOWED_HOSTS: "localhost,.eu-central-1.elb.amazonaws.com"
+  POSTGRES_DB: "mydb"
+  POSTGRES_USER: "user"
+  POSTGRES_PASSWORD: "password"
+  POSTGRES_HOST: "db-host"
+  POSTGRES_PORT: "5432"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

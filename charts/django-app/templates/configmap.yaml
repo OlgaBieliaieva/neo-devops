@@ -3,6 +3,11 @@ kind: ConfigMap
 metadata:
   name: {{ include "django-app.fullname" . }}-config
 data:
-{{- range $key, $value := .Values.config }}
-  {{ $key }}: "{{ $value }}"
-{{- end }}
+  SECRET_KEY: "my_secret_key"
+  DEBUG: "False"
+  ALLOWED_HOSTS: "localhost,.eu-central-1.elb.amazonaws.com"
+  POSTGRES_DB: "mydb"
+  POSTGRES_USER: "user"
+  POSTGRES_PASSWORD: "password"
+  POSTGRES_HOST: "db-host"
+  POSTGRES_PORT: "5432"

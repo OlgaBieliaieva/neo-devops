@@ -1,27 +1,29 @@
 output "cluster_name" {
-  value = aws_eks_cluster.this.name
+  description = "EKS cluster name"
+  value       = aws_eks_cluster.main.name
 }
 
 output "cluster_endpoint" {
-  value = aws_eks_cluster.this.endpoint
+  description = "EKS cluster endpoint"
+  value       = aws_eks_cluster.main.endpoint
 }
 
-output "cluster_ca" {
-  value = aws_eks_cluster.this.certificate_authority[0].data
+output "cluster_arn" {
+  description = "EKS cluster ARN"
+  value       = aws_eks_cluster.main.arn
 }
 
-output "kaniko_role_arn" {
-  value = aws_iam_role.kaniko.arn
-}
-
-output "eks_nodes_role_arn" {
-  value = aws_iam_role.eks_nodes.arn
-}
-
-output "eks_role_arn" {
-  value = aws_iam_role.eks.arn
+output "cluster_certificate_authority_data" {
+  description = "EKS cluster certificate authority data"
+  value       = aws_eks_cluster.main.certificate_authority[0].data
 }
 
 output "cluster_security_group_id" {
-  value = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+  description = "Security group ID attached to the EKS cluster"
+  value       = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
+output "node_group_arn" {
+  description = "EKS node group ARN"
+  value       = aws_eks_node_group.main.arn
 }

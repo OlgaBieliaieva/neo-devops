@@ -1,137 +1,148 @@
-provider "aws" {
-  region = var.region
-}
-
-# Kubernetes Provider для EKS
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.this.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.this.token
-  load_config_file       = false
-}
-
-# Helm Provider (для ArgoCD, Jenkins і т.д.)
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.this.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.this.token
-    load_config_file       = false
-  }
-}
-
-# IAM Role для EKS Cluster
-resource "aws_iam_role" "eks" {
-  name = "${var.cluster_name}-eks-role"
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "${var.cluster_name}-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "eks.amazonaws.com" }
-    }]
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "eks.amazonaws.com"
+        }
+      }
+    ]
   })
+
+  tags = {
+    Name        = "${var.cluster_name}-cluster-role"
+    Environment = "lesson-9"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  role       = aws_iam_role.eks.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
-  role       = aws_iam_role.eks.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
 # EKS Cluster
-resource "aws_eks_cluster" "this" {
+resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
-  role_arn = aws_iam_role.eks.arn
+  role_arn = aws_iam_role.eks_cluster_role.arn
+  version  = var.cluster_version
 
   vpc_config {
-    subnet_ids = var.subnet_ids
+    subnet_ids              = var.subnet_ids
+    endpoint_private_access = true
+    endpoint_public_access  = true
+    public_access_cidrs     = ["0.0.0.0/0"]
   }
 
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
   depends_on = [
-    aws_iam_role_policy_attachment.eks_cluster_policy,
-    aws_iam_role_policy_attachment.eks_vpc_resource_controller
+    aws_iam_role_policy_attachment.eks_cluster_policy
   ]
+
+  tags = {
+    Name        = var.cluster_name
+    Environment = "lesson-9"
+  }
 }
 
-# IAM Role для Node Group
-resource "aws_iam_role" "eks_nodes" {
-  name = "${var.cluster_name}-nodes-role"
+# EKS Node Group IAM Role
+resource "aws_iam_role" "eks_node_group_role" {
+  name = "${var.cluster_name}-node-group-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-    }]
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
   })
+
+  tags = {
+    Name        = "${var.cluster_name}-node-group-role"
+    Environment = "lesson-9"
+  }
 }
 
-resource "aws_iam_role_policy_attachment" "eks_worker_node" {
-  role       = aws_iam_role.eks_nodes.name
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node_group_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cni" {
-  role       = aws_iam_role.eks_nodes.name
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node_group_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "ec2_container_registry" {
-  role       = aws_iam_role.eks_nodes.name
+resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_group_role.name
 }
 
-resource "aws_launch_template" "eks_nodes_lt" {
-  name_prefix   = "${var.cluster_name}-lt-"
-  
-  instance_type = var.instance_type
+# EKS Node Group
+resource "aws_eks_node_group" "main" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = var.node_group_name
+  node_role_arn   = aws_iam_role.eks_node_group_role.arn
+  subnet_ids      = var.subnet_ids
 
-  vpc_security_group_ids = [var.worker_sg_id]
-
-  key_name = var.key_name
-}
-
-
-# Node Group
-resource "aws_eks_node_group" "default" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "${var.cluster_name}-ng"
-  node_role_arn   = aws_iam_role.eks_nodes.arn  
-  subnet_ids = var.private_subnet_ids
+  capacity_type  = "ON_DEMAND"
+  instance_types = [var.node_group_capacity]
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
+    desired_size = var.node_group_desired_size
+    max_size     = var.node_group_max_size
+    min_size     = var.node_group_min_size
   }
 
-  launch_template {
-    id      = aws_launch_template.eks_nodes_lt.id
-    version = "$Latest"
+  update_config {
+    max_unavailable = 1
   }
 
   depends_on = [
-    aws_eks_cluster.this,
-    aws_iam_role_policy_attachment.eks_worker_node,
-    aws_iam_role_policy_attachment.eks_cni,
-    aws_iam_role_policy_attachment.ec2_container_registry
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.eks_container_registry_policy,
   ]
+
+  tags = {
+    Name        = var.node_group_name
+    Environment = "lesson-9"
+  }
 }
 
-# Data sources для kubeconfig
-data "aws_eks_cluster" "this" {
-  name = aws_eks_cluster.this.name
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "vpc-cni"
 }
 
-data "aws_eks_cluster_auth" "this" {
-  name = aws_eks_cluster.this.name
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "coredns"
+  
+  depends_on = [aws_eks_node_group.main]
 }
 
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "kube-proxy"
+}
 
+resource "aws_iam_role_policy_attachment" "node_group_ebs_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.eks_node_group_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_group_ec2_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+  role       = aws_iam_role.eks_node_group_role.name
+}

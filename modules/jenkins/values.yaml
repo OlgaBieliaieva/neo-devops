@@ -1,38 +1,111 @@
 controller:
-  adminUser: "admin"
-  installPlugins:
-    - kubernetes:1.31.4
-    - workflow-aggregator:2.6
-    - credentials-binding:1.27
-    - git:4.8.2
-    - pipeline-github-lib:1.0
-  JCasC:
-    configScripts:
-      kubernetes-cloud: |
-        jenkins:
-          clouds:
-            - kubernetes:
-                name: "k8s"
-                namespace: "jenkins"
-                serverUrl: "https://kubernetes.default.svc"
-                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
-                templates:
-                  - name: "kaniko"
-                    label: "kaniko"
-                    serviceAccount: "jenkins-agent"
-                    containers:
-                      - name: kaniko
-                        image: "gcr.io/kaniko-project/executor:latest"
-                        command:
-                          - "/kaniko/executor"
-                        args:
-                          - "--verbosity=info"
-                    ttyEnabled: false
-  serviceType: ClusterIP
+  # Jenkins Controller Configuration
+  image:
+    repository: jenkins/jenkins
+    tag: 2.426.1-lts
+    pullPolicy: Always
+
+  # Resources
   resources:
-    limits:
-      cpu: "1"
-      memory: "1Gi"
     requests:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "1000m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+  # Service configuration
+  serviceType: LoadBalancer
+  servicePort: 8080
+
+  # Jenkins Configuration as Code
+  JCasC:
+    enabled: false  # вимикаємо init-контейнер JCasC
+    defaultConfig: false
+
+  # Security
+  admin:
+    existingSecret: ""
+    userKey: jenkins-admin-user
+    passwordKey: jenkins-admin-password
+
+  # Plugins to install
+  installPlugins:
+    - kubernetes:3937.vd7b_82db_e347b_
+    - workflow-aggregator:2.6
+    - git:4.8.3
+    - configuration-as-code:1625.v27444588cc3d
+    - pipeline-stage-view:2.25
+    - docker-workflow:1.29
+    - blueocean:1.25.2
+    - github:1.37.0
+    - pipeline-github-lib:38.v445716ea_edda_
+    - aws-credentials:191.vcb_f183ce58b_9
+
+  # Additional environment variables (AWS keys)
+  additionalEnv:
+    - name: AWS_ACCESS_KEY_ID
+      value: "AWS_ACCESS_KEY_ID"
+    - name: AWS_SECRET_ACCESS_KEY
+      value: "AWS_SECRET_ACCESS_KEY"
+
+  # Mount ConfigMap for Jenkins config
+  additionalVolumes:
+    - name: jenkins-casc
+      configMap:
+        name: jenkins-casc
+  additionalVolumeMounts:
+    - name: jenkins-casc
+      mountPath: /var/jenkins_home/casc_configs
+
+agent:
+  enabled: true
+  image:
+    repository: jenkins/inbound-agent
+    tag: 3107.v665000b_51092-5
+    pullPolicy: IfNotPresent
+
+  # Kaniko agent for Docker builds
+  podTemplates:
+    kaniko: |
+      - name: kaniko
+        label: kaniko
+        serviceAccount: jenkins-admin
+        containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:debug
+          command: ["/busybox/cat"]
+          tty: true
+          volumeMounts:
+          - name: aws-secret
+            mountPath: /root/.aws/
+        - name: git
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c", "cat"]
+          tty: true
+        volumes:
+        - name: aws-secret
+          secret:
+            secretName: aws-credentials
+
+# Persistence
+persistence:
+  enabled: true
+  storageClass: "gp2"
+  size: "20Gi"
+  accessMode: "ReadWriteOnce"
+
+# Security Context
+securityContext:
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Service Account
+serviceAccount:
+  create: false
+  name: jenkins-admin
+
+# RBAC
+rbac:
+  create: true
+  readSecrets: true

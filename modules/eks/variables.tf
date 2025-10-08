@@ -1,48 +1,49 @@
-variable "cluster_name" { type = string }
+variable "cluster_name" {
+  description = "Name of the EKS cluster"
+  type        = string
+}
+
+variable "cluster_version" {
+  description = "Kubernetes version"
+  type        = string
+  default     = "1.28"
+}
+
+variable "vpc_id" {
+  description = "VPC ID where EKS cluster will be created"
+  type        = string
+}
+
 variable "subnet_ids" {
-  description = "List of private subnet IDs for EKS node group"
+  description = "List of subnet IDs for EKS cluster"
   type        = list(string)
 }
-variable "vpc_id" { type = string }
-variable "region" { type = string }
 
-variable "node_instance_type" {
-  type    = string
-  default = "t3.medium"
-}
-
-variable "key_name" {
-  description = "EC2 SSH key name для Node Group"
+variable "node_group_name" {
+  description = "Name of the EKS node group"
   type        = string
 }
 
-variable "private_subnets" {
-  description = "List of private subnet IDs for EKS worker nodes"
-  type        = list(string)
-}
-
-variable "public_subnets" {
-  description = "List of public subnet IDs for EKS cluster"
-  type        = list(string)
-}
-
-variable "node_security_groups" {
-  type    = list(string)
-  default = []
-}
-
-variable "worker_sg_id" {
-  description = "Security group ID for EKS worker nodes"
-  type        = string
-}
-
-variable "instance_type" {
-  description = "Type of EC2 instances in the node group"
+variable "node_group_capacity" {
+  description = "Instance type for EKS node group"
   type        = string
   default     = "t3.medium"
 }
 
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for the EKS cluster"
-  type        = list(string)
+variable "node_group_min_size" {
+  description = "Minimum size of the node group"
+  type        = number
+  default     = 1
+}
+
+variable "node_group_max_size" {
+  description = "Maximum size of the node group"
+  type        = number
+  default     = 3
+}
+
+variable "node_group_desired_size" {
+  description = "Desired size of the node group"
+  type        = number
+  default     = 2
 }

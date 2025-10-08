@@ -1,21 +1,29 @@
 output "vpc_id" {
-  value = aws_vpc.this.id
+  description = "VPC ID"
+  value       = aws_vpc.main.id
 }
 
-output "public_subnets" {
-  value = [for s in aws_subnet.public : s.id]
+output "vpc_cidr_block" {
+  description = "VPC CIDR block"
+  value       = aws_vpc.main.cidr_block
 }
 
-output "private_subnets" {
-  value = [for s in aws_subnet.private : s.id]
-}
-
-output "eks_worker_sg_id" {
-  description = "Security group for EKS worker nodes"
-  value       = aws_security_group.eks_worker_sg.id
+output "public_subnet_ids" {
+  description = "Public subnet IDs"
+  value       = aws_subnet.public[*].id
 }
 
 output "private_subnet_ids" {
-  description = "IDs of private subnets"
-  value       = [for subnet in aws_subnet.private : subnet.id]
+  description = "Private subnet IDs"
+  value       = aws_subnet.private[*].id
+}
+
+output "internet_gateway_id" {
+  description = "Internet Gateway ID"
+  value       = aws_internet_gateway.main.id
+}
+
+output "nat_gateway_ids" {
+  description = "NAT Gateway IDs"
+  value       = aws_nat_gateway.main[*].id
 }

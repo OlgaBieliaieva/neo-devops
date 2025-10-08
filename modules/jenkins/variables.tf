@@ -1,26 +1,39 @@
-variable "cluster_name" { type = string }
-variable "cluster_endpoint" { type = string }
-variable "cluster_ca" { type = string }
-
-variable "ecr_repository" { type = string }
-
-
-variable "jenkins_namespace" {
-  type    = string
-  default = "jenkins"
+variable "cluster_name" {
+  description = "EKS cluster name"
+  type        = string
 }
 
-variable "jenkins_chart_version" {
-  type    = string
-  default = "4.9.0"
+variable "cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  type        = string
+}
+
+variable "namespace" {
+  description = "Kubernetes namespace for Jenkins"
+  type        = string
+  default     = "jenkins"
+}
+
+variable "jenkins_admin_user" {
+  description = "Jenkins admin username"
+  type        = string
+  default     = "admin"
 }
 
 variable "jenkins_admin_password" {
-  type    = string
-  default = "123456"
+  description = "Jenkins admin password"
+  type        = string
+  default     = "admin123"
 }
 
-variable "kaniko_role_arn" {
+variable "storage_class" {
+  description = "Storage class for Jenkins PVC"
   type        = string
-  description = "IAM Role ARN для Jenkins Kaniko Agent"
+  default     = "gp2"
+}
+
+variable "storage_size" {
+  description = "Storage size for Jenkins PVC"
+  type        = string
+  default     = "20Gi"
 }
