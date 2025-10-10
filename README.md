@@ -207,7 +207,7 @@ neo-devops/
 
 ## ✅ Вимоги
 
-AWS акаунт з налаштованими credentials.
+- AWS акаунт з налаштованими credentials.
 
 - Terraform v1.3+.
 
