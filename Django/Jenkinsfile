@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'eu-central-1'
+        ECR_REPO  = '556240469610.dkr.ecr.eu-central-1.amazonaws.com/django-app'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        KUBE_NAMESPACE = 'default'
+        ARGO_APP_NAME = 'django-app'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Setup AWS Credentials') {
+            steps {
+                withAWS(credentials: 'aws-iam-user', region: "${env.AWS_REGION}") {
+                    sh 'aws sts get-caller-identity'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh """
+                        docker build -t ${ECR_REPO}:${IMAGE_TAG} ./Django
+                    """
+                }
+            }
+        }
+
+        stage('Login to ECR') {
+            steps {
+                script {
+                    sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+                    """
+                }
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh "docker push ${ECR_REPO}:${IMAGE_TAG}"
+            }
+        }
+
+        stage('Update Kubernetes Deployment') {
+            steps {
+                
+                sh """
+                    argocd login <ARGO_CD_SERVER> --username admin --password <ARGO_CD_PASSWORD> --insecure
+                    argocd app set ${ARGO_APP_NAME} --image ${ECR_REPO}:${IMAGE_TAG}
+                    argocd app sync ${ARGO_APP_NAME}
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline завершено успішно! Docker-образ ${IMAGE_TAG} розгорнуто через Argo CD"
+        }
+        failure {
+            echo "Pipeline завершився з помилкою."
+        }
+    }
+}

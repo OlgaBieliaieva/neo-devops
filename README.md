@@ -1,15 +1,27 @@
 # Neo DevOps Terraform & Kubernetes Project
 
-Цей проєкт створює базову інфраструктуру в AWS за допомогою Terraform та розгортає Django-додаток у Kubernetes через Helm.
+Цей проєкт реалізує повну DevOps-інфраструктуру в AWS з використанням Terraform та Kubernetes (EKS) 
+для автоматизації CI/CD, розгортання застосунків та моніторингу.
 
-Інфраструктура включає:
+## 🚀 Основна мета
 
-- **S3 бакет** + **DynamoDB** для зберігання та блокування Terraform state.
-- **VPC** з публічними та приватними підмережами, інтернет-шлюзом та маршрутами.
-- **ECR репозиторій** для зберігання Docker образів.
-- **EKS кластер** для запуску Kubernetes.
-- **Helm чарти** для деплою Django-додатку.
-- **RDS / Aurora** для зберігання даних додатку.
+### Інфраструктура забезпечує:
+
+- **EKS кластер** для Kubernetes-додатків
+
+- **Jenkins** для CI/CD-процесів
+
+- **Argo CD** для GitOps-деплою застосунків
+
+- **RDS / Aurora** для бази даних
+
+- **ECR** для зберігання Docker-образів
+
+- **Prometheus + Grafana** для моніторингу
+
+- **S3 + DynamoDB** для бекенду Terraform state
+
+- **VPC** з публічними та приватними підмережами
 
 ---
 
@@ -22,68 +34,57 @@ neo-devops/
 ├── outputs.tf
 │
 ├── modules/
-│ ├── s3-backend/
-│ ├── vpc/
-│ ├── ecr/
-│ ├── eks/
-│ ├── rds/ # ✅ Новий модуль RDS
-│ │ ├── rds.tf
-│ │ ├── aurora.tf
-│ │ ├── shared.tf
-│ │ ├── variables.tf
-│ │ └── outputs.tf
-│ └── jenkins/
-│ └── argo_cd/
+│ ├── s3-backend/        # S3 + DynamoDB для state
+│ ├── vpc/               # VPC, сабнети, маршрути
+│ ├── ecr/               # ECR репозиторій
+│ ├── eks/               # EKS кластер + драйвер EBS CSI
+│ ├── rds/               # RDS / Aurora
+│ ├── jenkins/           # Jenkins через Helm
+│ ├── argo_cd/           # Argo CD + чарти застосунків
+│ └── monitoring/        # Prometheus + Grafana (Helm)
+│
 ├── charts/
-│ └── django-app/
+│ └── django-app/        # Helm чарт Django-додатку
+│
+└── Django/
+   ├── app/
+   ├── Dockerfile
+   ├── Jenkinsfile
+   └── docker-compose.yaml
 ```
 
 ---
 
 ## ⚙️ Команди Terraform
 
-1. Ініціалізація Terraform та бекенду:
-
    ```bash
-   terraform init
+   terraform init         # 1. Ініціалізація бекенду (S3 + DynamoDB)
+   terraform plan         # 2. Перевірка плану
+   terraform apply        # 3. Розгортання всієї інфраструктури
+   terraform destroy      # 4. Повне видалення ресурсів
    ```
 
-2. Перевірка плану змін:
-   ```bash
-   terraform plan
-   ```
-3. Створення інфраструктури:
-   ```bash
-   terraform apply
-   ```
-4. Видалення всієї інфраструктури:
-   ```bash
-   terraform destroy
-   ```
+## 🔧 Після розгортання
+### Перевірка стану Kubernetes
 
-## 🏗️ Деплой Django в Kubernetes через Helm
-
-1. Перевірка доступності Kubernetes кластера (EKS):
-
-   ```bash
+```bash
    aws eks --region <region> update-kubeconfig --name <cluster_name>
    kubectl get nodes
+   kubectl get all -n jenkins
+   kubectl get all -n argocd
+   kubectl get all -n monitoring
    ```
 
-2. Деплой Django-додатку:
+## 🌐 Перевірка доступності сервісів
 
-   ```bash
-   helm upgrade --install django-app ./charts/django-app -n default -f ./charts/django-app/values.yaml
-   ```
-3. Перевірка стану Pods:
+| Сервіс     | Команда Port Forward                                               | Порт доступу                                     | Призначення     |
+| ---------- | ------------------------------------------------------------------ | ------------------------------------------------ | --------------- |
+| Jenkins    | `kubectl port-forward svc/jenkins 8080:8080 -n jenkins`            | [http://localhost:8080](http://localhost:8080)   | CI/CD пайплайни |
+| Argo CD    | `kubectl port-forward svc/argocd-server 8081:443 -n argocd`        | [https://localhost:8081](https://localhost:8081) | GitOps деплой   |
+| Grafana    | `kubectl port-forward svc/grafana 3000:80 -n monitoring`           | [http://localhost:3000](http://localhost:3000)   | Моніторинг      |
+| Prometheus | `kubectl port-forward svc/prometheus-server 9090:80 -n monitoring` | [http://localhost:9090](http://localhost:9090)   | Метрики         |
 
-   ```bash
-   kubectl get pods -n default -l app=django-app
-   ```
-4. Перевірка сервісу та зовнішньої адреси:
-   ```bash
-   kubectl get svc -n default
-   ```
+
 
 ## 📦 Модулі
 
@@ -127,97 +128,108 @@ neo-devops/
 
 - Підтримує масштабування worker-нодів.
 
-🔹 rds ✅
+🔹 rds / aurora
 
-Модуль для створення бази даних, який універсально працює як для звичайної RDS instance, так і для Aurora Cluster.
+- Створює базу даних: RDS або Aurora.
 
-### Основні можливості:
+- Автоматично створює:
 
-1. use_aurora = true → створює Aurora Cluster + writer.
+   DB Subnet Group
 
-2. use_aurora = false → створює стандартну aws_db_instance.
+   Security Group
 
-3. Автоматично створює:
+   Parameter Group
 
-- DB Subnet Group
+- Підтримує змінні:
 
-- Security Group
+   use_aurora (true/false)
 
-- Parameter Group з базовими налаштуваннями (max_connections, log_statement, work_mem).
+   engine, engine_version
 
-4. Параметри, які можна змінювати через змінні:
+   instance_class, multi_az
 
-- engine (тип бази: postgres, mysql тощо)
+🔹 jenkins
 
-- engine_version
+- Розгортає Jenkins у namespace jenkins через Helm.
 
-- instance_class
+- Має власний values.yaml для налаштування агентів, ресурсів і pipeline.
 
-- multi_az для RDS
+- Після деплою доступ через kubectl port-forward.
 
-5. Підтримка багаторазового використання модуля з мінімальними змінами.
+🔹 argo_cd
 
-### Приклад використання модуля:
-```bash
-module "rds" {
-  source        = "./modules/rds"
-  use_aurora    = true
-  engine        = "aurora-postgresql"
-  engine_version = "15.2"
-  instance_class = "db.r6g.large"
-  multi_az      = true
-  db_name       = "myappdb"
-  username      = "admin"
-  password      = "SuperSecret"
-  vpc_id        = module.vpc.vpc_id
-  subnet_ids    = module.vpc.private_subnets
-}
-```
-### Змінні модуля (variables.tf):
-| Змінна           | Тип    | Опис                                                   |
-| ---------------- | ------ | ------------------------------------------------------ |
-| `use_aurora`     | bool   | Якщо true → Aurora Cluster, якщо false → RDS instance  |
-| `engine`         | string | Тип БД (`postgres`, `mysql`, `aurora-postgresql` тощо) |
-| `engine_version` | string | Версія БД                                              |
-| `instance_class` | string | Тип інстансу AWS RDS                                   |
-| `multi_az`       | bool   | Множинна зона для RDS instance                         |
-| `db_name`        | string | Ім'я бази даних                                        |
-| `username`       | string | Логін адміністратора                                   |
-| `password`       | string | Пароль адміністратора                                  |
-| `vpc_id`         | string | ID VPC для DB                                          |
-| `subnet_ids`     | list   | Список приватних subnet IDs для DB Subnet Group        |
+- Розгортає Argo CD через Helm у namespace argocd.
 
-### Outputs (outputs.tf):
-- db_endpoint – адреса для підключення до бази.
+- Має Helm-підкаталог charts/ із:
 
-- db_port – порт бази.
+   application.yaml — визначення застосунків
 
-- db_cluster_id – ID Aurora Cluster (якщо use_aurora=true).
+   repository.yaml — підключення Git-репозиторію
 
-- db_instance_id – ID RDS instance (якщо use_aurora=false).
+- Автоматично створює app для Django через GitOps.
 
+🔹 monitoring
+
+- Розгортає Prometheus + Grafana через Helm.
+
+- Збирає метрики з Kubernetes та додатків.
+
+- Grafana Dashboard відображає стан кластеру, CPU, RAM, мережу.
+
+
+## 🧩 Django-додаток
+
+- Зберігається у каталозі Django/
+
+- Має Dockerfile та Jenkinsfile для CI/CD
+
+- Розгортається через Helm-чарт у charts/django-app/
+
+- Використовує ConfigMap із values.yaml для параметрів середовища
+
+- Має autoscaling через hpa.yaml
+
+
+## 🔍 Моніторинг і метрики
+
+- Prometheus збирає метрики з EKS, pod’ів і додатків.
+
+- Grafana візуалізує:
+
+- Навантаження CPU/RAM
+
+- Стан pod’ів
+
+- Відмови деплойментів
+
+- Стан БД та сервісів
 
 
 ## ✅ Вимоги
 
 AWS акаунт з налаштованими credentials.
 
-Terraform v1.3+.
+- Terraform v1.3+.
 
-AWS CLI.
+- AWS CLI.
 
-Helm 3+.
+- Helm 3+.
 
-Kubectl 1.25+.
+- Kubectl 1.25+.
 
-Docker (для збірки та пушу образів).
+- Docker (для збірки та пушу образів).
+
 
 ## 🔑 Outputs
 
 Після виконання terraform apply ви отримаєте:
 
-ECR URL — адреса репозиторію для пушу образів.
+- ecr_repository_url — адреса для пушу Docker-образів
 
-VPC ID та сабнети.
+- rds_endpoint — підключення до бази даних
 
-Назву S3 бакету та DynamoDB таблиці для бекенду.
+- eks_cluster_name — ім’я Kubernetes-кластера
+
+- jenkins_url, argo_cd_url, grafana_url — доступи до сервісів
+
+- s3_bucket_name, dynamodb_table — бекенд Terraform

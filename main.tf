@@ -173,3 +173,7 @@ module "argo_cd" {
   cluster_endpoint = module.eks.cluster_endpoint
   namespace        = "argocd"
 }
+
+module "prometheus_grafana" {
+  source = "./modules/prometheus-grafana"
+}
